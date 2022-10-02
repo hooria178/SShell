@@ -1,2 +1,2 @@
-# ecs150--sshell
-Project 1: sshell
+#ECS 150 Project #1: sshell
+
