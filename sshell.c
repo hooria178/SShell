@@ -5,6 +5,26 @@
 #include <sys/wait.h>
 
 #define CMDLINE_MAX 512
+/*
+char** parse(char* cmd){
+        char **argu;
+        int currentLetter = 0;
+        int argumentCount = 0;
+
+        for(int i = 0; i < CMDLINE_MAX; i++){
+                if(cmd[i] == ' '){ //if cmd[i] is a space
+                        //printf("currentword: %s\n", argu[i]);
+                        currentLetter = 0; // resets back to 0 for next word's first character
+                        argumentCount++; // move to the next argument
+                }
+                else{ // if cmd[i] is NOT a space
+                        argu[argumentCount][currentLetter] = cmd[i]; // add letter to the current argument
+                        currentLetter++; //move to the next letter
+                }
+        }
+        return argu**;
+}
+*/
 
 int main(void)
 {
@@ -21,6 +41,23 @@ int main(void)
 
         /* Get command line */
         fgets(cmd, CMDLINE_MAX, stdin);
+        //char **argu = parse(cmd);
+        char argu[16][32];
+        int currentLetter = 0;
+        int argumentCount = 0;
+
+        for(int i = 0; i < CMDLINE_MAX; i++){
+                if(cmd[i] == ' '){ //if cmd[i] is a space
+                        printf("currentword: %s\n", argu[i]);
+                        currentLetter = 0; // resets back to 0 for next word's first character
+                        argumentCount++; // move to the next argument
+                }
+                else{ // if cmd[i] is NOT a space
+                        argu[argumentCount][currentLetter] = cmd[i]; // add letter to the current argument
+                        currentLetter++; //move to the next letter
+                }
+        }
+         
         // printf("%s\n", cmd);
         // char cmdcopy[CMDLINE_MAX] = cmd;
         // char *arguments;
@@ -72,10 +109,10 @@ int main(void)
             pid_t pid = fork(); // forking to run the command
             if (pid == 0)
             {
-                char *argu[] = {"ECS150", NULL};
+                //char *argu[] = {"ECS150", NULL};
                 // int execvp(const char *file, char *const argv[]);
-                // int execv(const char *path, char *const argv[]);
-                execvp(cmd, argu); // execvp: No such file or directory
+                printf("%s\n", cmd);
+                execvp(argu[0], NULL); // execvp: No such file or directory
                                    //   + completed 'echo ECS150' [1]
                 perror("execvp");  // CHANGE THIS
                 exit(1);
@@ -107,58 +144,3 @@ int main(void)
 
     return EXIT_SUCCESS;
 }
-/*
-        Phase 1:
-        pid_t sshellPid = fork(); // forking to keep the sshell running
-        if (sshellPid == 0) // child process to wait for its child to run command and return it back to display on terminal
-        {
-                pid_t pid = fork(); // forking to run the command
-                if (pid == 0)
-                {
-                        execvp(cmd, "ECS150");
-                        perror("execvp"); //CHANGE THIS
-                        exit(1);
-                }
-                else if (pid > 0)
-                {
-                        int status;
-                        waitpid(pid, &status, 0);
-                        printf("+ completed '%s' [%d]\n", cmd, WEXITSTATUS(status));
-                }
-                else
-                {
-                        perror("fork");
-                        exit(2)
-                }
-        }
-        else if (sshellPid > 0)
-        {
-                int status;
-                waitpid(sshellPid, &status, 0); // wait for its child to return back with value to print on terminal
-                break;
-        }
-        else
-        {
-                perror("fork");
-                exit(3)
-        }
-
-
-
-
-        pid_t pid = fork();
-        if (pid == 0) {
-        execv(cmd, args);
-        perror("execv");
-        exit(1);
-        } else if (pid > 0) {
-        int status;
-        waitpid(pid, &status, 0);
-        printf("Child returned %d\n",
-               WEXITSTATUS(status));
-        }
-        else {
-        perror("fork");
-        exit(1);
-        }
-*/
