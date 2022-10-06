@@ -56,16 +56,17 @@ int main(void)
                 argumentCount++;   // move to the next argument
             }
             else
-            {
-                printf("current character: %c\n", cmd[i]);  // if cmd[i] is NOT a space
+            { // if cmd[i] is NOT a space
+                // printf("current character: %c\n", cmd[i]);
                 arg[argumentCount][currentLetter] = cmd[i]; // add letter to the current argument
                 currentLetter++;                            // move to the next letter
             }
         }
         // prints current word
-        printf("Argument 0: %s\n", arg[0]);
-        printf("Argument 1: %s\n", arg[1]);
-        printf("Argument 2: %s\n", arg[2]);
+        for (int i = 0; i <= argumentCount; i++)
+        {
+            printf("Argument %d: %s\n", i, arg[i]);
+        }
 
         /* Print command line if stdin is not provided by terminal */
         if (!isatty(STDIN_FILENO))
@@ -96,10 +97,10 @@ int main(void)
             {
 
                 int evpReturn = execvp(arg[0], arg);
+                printf("%d\n", 500000);
                 // free argument variable
                 for (int i = 0; i < 16; ++i)
                 {
-                    printf("%d\n", i);
                     free(arg[i]);
                 }
                 free(arg);
@@ -137,8 +138,6 @@ int main(void)
             perror("fork");
             exit(0);
         }
-
-        
     }
 
     return EXIT_SUCCESS;
