@@ -5,26 +5,6 @@
 #include <sys/wait.h>
 
 #define CMDLINE_MAX 512
-/*
-char** parse(char* cmd){
-        char **argu;
-        int currentLetter = 0;
-        int argumentCount = 0;
-
-        for(int i = 0; i < CMDLINE_MAX; i++){
-                if(cmd[i] == ' '){ //if cmd[i] is a space
-                        //printf("currentword: %s\n", argu[i]);
-                        currentLetter = 0; // resets back to 0 for next word's first character
-                        argumentCount++; // move to the next argument
-                }
-                else{ // if cmd[i] is NOT a space
-                        argu[argumentCount][currentLetter] = cmd[i]; // add letter to the current argument
-                        currentLetter++; //move to the next letter
-                }
-        }
-        return argu**;
-}
-*/
 
 int main(void)
 {
@@ -41,45 +21,58 @@ int main(void)
 
         /* Get command line */
         fgets(cmd, CMDLINE_MAX, stdin);
-        //char **argu = parse(cmd);
-        char arg[16][32];
+
+        /* Remove trailing newline from command line */
+        nl = strchr(cmd, '\n');
+        if (nl)
+            *nl = '\0';
+
         int currentLetter = 0;
         int argumentCount = 0;
         int cmdLength = strlen(cmd);
 
-        for(int i = 0; i < cmdLength; i++){
-                if(cmd[i] == ' ')
-                { //if cmd[i] is a space
-                        // prints current word
-                        for (int i = 0; i < currentLetter; i++) 
-                        {     
-                                printf("%c", arg[argumentCount][i]);
+        // for (int i = 0; i < cmdLength; i++)
+        // {
+        //     if (cmd[i] == ' ')
+        //     {
+        //         totalArguments++;
+        //     }
+        // }
 
-                        }
-                        printf("\n");
-                        currentLetter = 0; // resets back to 0 for next word's first character
-                        argumentCount++; // move to the next argument
-                }
-                else{ // if cmd[i] is NOT a space
-                        arg[argumentCount][currentLetter] = cmd[i]; // add letter to the current argument
-                        currentLetter++; //move to the next letter
-                       
-                }
-                // printf("argumentCount: %d\n", argumentCount);
-                // printf("currentLetter: %d\n", currentLetter);
+        char **arg = malloc(16 * sizeof(char *));
+        for (int i = 0; i < 16; ++i)
+        {
+            arg[i] = malloc(32 * sizeof(char));
         }
-         
+
+        // arg[totalArguments+1] = NULL;
+
+        for (int i = 0; i < cmdLength; i++)
+        {
+            if (cmd[i] == ' ' || NULL)
+            { // if cmd[i] is a space
+
+                currentLetter = 0; // resets back to 0 for next word's first character
+                argumentCount++;   // move to the next argument
+            }
+            else
+            {
+                printf("current character: %c\n", cmd[i]);  // if cmd[i] is NOT a space
+                arg[argumentCount][currentLetter] = cmd[i]; // add letter to the current argument
+                currentLetter++;                            // move to the next letter
+            }
+        }
+        // prints current word
+        printf("Argument 0: %s\n", arg[0]);
+        printf("Argument 1: %s\n", arg[1]);
+        printf("Argument 2: %s\n", arg[2]);
+
         /* Print command line if stdin is not provided by terminal */
         if (!isatty(STDIN_FILENO))
         {
             printf("%s", cmd);
             fflush(stdout);
         }
-
-        /* Remove trailing newline from command line */
-        nl = strchr(cmd, '\n');
-        if (nl)
-            *nl = '\0';
 
         /* Builtin command */
         if (!strcmp(cmd, "exit"))
@@ -95,33 +88,42 @@ int main(void)
         }
 
         /* Regular command */
-        // retval = system(cmd);
-        // fprintf(stdout, "Return status value for '%s': %d\n",
-        //         cmd, retval);
         pid_t sshellPid = fork(); // forking to keep the sshell running
         if (sshellPid == 0)       // child process to wait for its child to run command and return it back to display on terminal
         {
             pid_t pid = fork(); // forking to run the command
             if (pid == 0)
             {
-                //char *argu[] = {"ECS150", NULL};
-                // int execvp(const char *file, char *const argv[]);
-                printf("%s\n", "Ignore");
-                //execvp(argu[0], NULL); // execvp: No such file or directory
-                                   //   + completed 'echo ECS150' [1]
-                //perror("execvp");  // CHANGE THIS
-                exit(1);
+
+                int evpReturn = execvp(arg[0], arg);
+                // free argument variable
+                for (int i = 0; i < 16; ++i)
+                {
+                    printf("%d\n", i);
+                    free(arg[i]);
+                }
+                free(arg);
+                if (evpReturn < 0)
+                {
+                    perror("execvp");
+                    exit(1);
+                }
+                else
+                {
+                    exit(0);
+                    // exit(EXIT_FAILURE);
+                }
             }
             else if (pid > 0)
             {
                 int status;
                 waitpid(pid, &status, 0);
-                printf("+ completed '%s' [%d]\n", cmd, WEXITSTATUS(status));
+                fprintf(stderr, "+ completed '%s' [%d]\n", cmd, WEXITSTATUS(status));
             }
             else
             {
                 perror("fork");
-                exit(2);
+                exit(0);
             }
         }
         else if (sshellPid > 0)
@@ -133,13 +135,11 @@ int main(void)
         else
         {
             perror("fork");
-            exit(3);
+            exit(0);
         }
+
+        
     }
 
     return EXIT_SUCCESS;
 }
-/*
-        PHASE 1: Pseudocode
-        1. 
-*/
