@@ -42,38 +42,33 @@ int main(void)
         /* Get command line */
         fgets(cmd, CMDLINE_MAX, stdin);
         //char **argu = parse(cmd);
-        char argu[16][32];
+        char arg[16][32];
         int currentLetter = 0;
         int argumentCount = 0;
+        int cmdLength = strlen(cmd);
 
-        for(int i = 0; i < CMDLINE_MAX; i++){
-                if(cmd[i] == ' '){ //if cmd[i] is a space
-                        printf("currentword: %s\n", argu[i]);
+        for(int i = 0; i < cmdLength; i++){
+                if(cmd[i] == ' ')
+                { //if cmd[i] is a space
+                        // prints current word
+                        for (int i = 0; i < currentLetter; i++) 
+                        {     
+                                printf("%c", arg[argumentCount][i]);
+
+                        }
+                        printf("\n");
                         currentLetter = 0; // resets back to 0 for next word's first character
                         argumentCount++; // move to the next argument
                 }
                 else{ // if cmd[i] is NOT a space
-                        argu[argumentCount][currentLetter] = cmd[i]; // add letter to the current argument
+                        arg[argumentCount][currentLetter] = cmd[i]; // add letter to the current argument
                         currentLetter++; //move to the next letter
+                       
                 }
+                // printf("argumentCount: %d\n", argumentCount);
+                // printf("currentLetter: %d\n", currentLetter);
         }
          
-        // printf("%s\n", cmd);
-        // char cmdcopy[CMDLINE_MAX] = cmd;
-        // char *arguments;
-        // arguments = strtok(cmd, " ");
-        //  char arguments[16][32];
-        //  char *token = strtok(cmd," ");
-        //  int tokencounter = 0;
-        //  while(!token){
-        //          *arguments[tokencounter] = *token;
-        //          token = strtok(NULL," ");
-        //          tokencounter++;
-        //  }
-        //  for(int i = 0; i < tokencounter; i++){
-        //          printf("%s\n", arguments[i]);
-        //  }
-
         /* Print command line if stdin is not provided by terminal */
         if (!isatty(STDIN_FILENO))
         {
@@ -111,10 +106,10 @@ int main(void)
             {
                 //char *argu[] = {"ECS150", NULL};
                 // int execvp(const char *file, char *const argv[]);
-                printf("%s\n", cmd);
-                execvp(argu[0], NULL); // execvp: No such file or directory
+                printf("%s\n", "Ignore");
+                //execvp(argu[0], NULL); // execvp: No such file or directory
                                    //   + completed 'echo ECS150' [1]
-                perror("execvp");  // CHANGE THIS
+                //perror("execvp");  // CHANGE THIS
                 exit(1);
             }
             else if (pid > 0)
@@ -144,3 +139,7 @@ int main(void)
 
     return EXIT_SUCCESS;
 }
+/*
+        PHASE 1: Pseudocode
+        1. 
+*/
