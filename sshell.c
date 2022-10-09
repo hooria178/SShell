@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -78,14 +79,29 @@ int main(void)
         /* Builtin command */
         if (!strcmp(cmd, "exit"))
         {
-            fprintf(stderr, "Bye...\n");
+            // fprintf(stderr, "Bye...\n");
+            fprintf(stderr, "Bye...\n+ completed '%s' [%d]\n", cmd, 0); // EXITSTATUS NEEDED
             break;
         }
         else if (!strcmp(cmd, "pwd"))
         {
+            printf("IN BUILTIN\n");
+            char *current_directory = get_current_dir_name();
+            printf("%s\n", current_directory);
+            fprintf(stderr, "Bye...\n+ completed '%s' [%d]\n", cmd, 0); // EXITSTATUS NEEDED
+            continue;
         }
-        else if (!strcmp(cmd, "cd"))
+        else if (strstr(cmd, "cd"))
         {
+            // int chdir(const char *filename)
+            char *new_directory = arg[1];
+            chdir(new_directory);
+            perror("cd");
+            char *current_directory = get_current_dir_name();
+            printf("%s\n", current_directory);
+            fprintf(stderr, "Bye...\n+ completed '%s' [%d]\n", cmd, 0); // EXITSTATUS NEEDED
+
+            continue;
         }
 
         /* Regular command */
