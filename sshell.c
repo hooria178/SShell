@@ -4,75 +4,89 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/wait.h>
-#include <sys/types.h>
-#include <fcntl.h>
-#include <sys/stat.h>
 
 #define CMDLINE_MAX 512
 #define MAX_ARG 16
 #define MAX_LENGTH 32
 
-struct CommandLine {
+struct CommandLine
+{
     char **arg;
     char *fileName;
 };
 
-void parseCommandLine(struct CommandLine *cl, char* cmd){
-    
+void parseCommandLine(struct CommandLine *cl, char *cmd)
+{
+
     int currentLetter = 0;
     int argumentCount = 0;
     int cmdLength = strlen(cmd);
-
+    int lengthSoFar = 0;
 
     for (int i = 0; i < cmdLength; i++)
     {
         if (cmd[i] == ' ' || NULL)
         { // if cmd[i] is a space
-            while(i < cmdLength-1 && cmd[i+1] == ' '){
+            while (i < cmdLength - 1 && cmd[i + 1] == ' ')
+            {
                 i++;
             }
             currentLetter = 0; // resets back to 0 for next word's first character
             argumentCount++;   // move to the next argument
         }
-        else if(cmd[i] == '>')
+        else if (cmd[i] == '>')
         {
-            i++;
-            while(i < cmdLength && cmd[i] == ' '){
-                i++;
-            }
-            int j = 0;
-            while(i < cmdLength && cmd[i] != ' '){
-                cl->fileName[j] = cmd[i];
-                j++;
-                i++;
-            }
-            argumentCount++;
-            currentLetter = 0;
+            lengthSoFar = i;
+            break;
         }
         else
-        { // if cmd[i] is NOT a space
+        {                                                   // if cmd[i] is NOT a space
             cl->arg[argumentCount][currentLetter] = cmd[i]; // add letter to the current argument
-            currentLetter++;                            // move to the next letter
+            currentLetter++;                                // move to the next letter
         }
     }
-    
+    // printf("Argument Count: %d\n", argumentCount);
+    /*
+        take fileName from the argument list
+        then later assign NULL to any arguments after '>'
+    */
+    if (lengthSoFar != cmdLength && strstr(cmd, ">"))
+    {
+        int outputArg = argumentCount + 1;
+        currentLetter = 0;
+        // printf("cmdLine contains '>'\n");
+        // printf("%c\n", cmd[lengthSoFar]);
+        for (int i = lengthSoFar + 1; i < cmdLength; i++)
+        {
+            while (cmd[i] == ' ') // if cmd[i] is a space
+            {
+                i++;
+            }
+            // printf("%c\n", cmd[i]);
+            cl->arg[outputArg][currentLetter] = cmd[i];
+            currentLetter++;
+        }
+        // printf("%s\n", cl->arg[outputArg]);
+        cl->fileName = cl->arg[outputArg];
+        // printf("%s\n", cl->fileName);
+    }
+
     // Assigns "NULL" to remaining argument slots
     if (argumentCount < MAX_ARG)
     {
-        for (int i = argumentCount + 1; i <= (MAX_ARG - argumentCount); i++)
+        for (int i = argumentCount; i <= (MAX_ARG - argumentCount); i++)
         {
             cl->arg[i] = NULL;
         }
     }
 }
 
-
 /*
     function for output redirection:
     1. open file by the filename
     2. take the output of the command before ">"
     3. write the output to the file
-    4. close the file 
+    4. close the file
 */
 
 int main(void)
@@ -96,38 +110,18 @@ int main(void)
         if (nl)
             *nl = '\0';
 
-        
         struct CommandLine *cl = malloc(sizeof(struct CommandLine));
         cl->arg = malloc(MAX_ARG * sizeof(char *));
         for (int i = 0; i < MAX_ARG; ++i)
         {
             cl->arg[i] = malloc(MAX_LENGTH * sizeof(char));
         }
-        cl->fileName = malloc(MAX_LENGTH * sizeof(char));
-        cl->fileName = NULL;
+        cl->fileName = malloc(MAX_LENGTH * sizeof(char *));
 
         parseCommandLine(cl, cmd);
-
-        // for (int i = 0; i <= MAX_ARG; i++)
-        // {
-        //     printf("Argument %d: %s\n", i, cl->arg[i]);
-        // }
-        //output redirection
-        if(cl->fileName != NULL)
-        {
-            printf("Hello #1\n");
-
-            int fd = open(cl->fileName, O_WRONLY | O_CREAT, 0644);
-            //dup2(fd, STDOUT_FILENO);
-            close(fd);
-
-            printf("Hello #2\n");
-        }
-        
-        printf("fileName: %s\n", cl->fileName);
-        
+        printf("File Name: %s\n", cl->fileName);
         // // prints current word
-        // for (int i = 0; i <= MAX_ARG; i++)
+        // for (int i = 0; i < MAX_ARG; i++)
         // {
         //     printf("Argument %d: %s\n", i, cl->arg[i]);
         // }
@@ -171,9 +165,8 @@ int main(void)
             pid_t pid = fork(); // forking to run the command
             if (pid == 0)
             {
-                printf("pid = %d\n", pid);
+                // printf("pid = %d\n", pid);
                 int evpReturn = execvp(cl->arg[0], cl->arg);
-                //printf("fileName: %s\n", cl->fileName);
 
                 // free argument variable
                 for (int i = 0; i < 16; ++i)
@@ -183,7 +176,7 @@ int main(void)
                 free(cl->arg);
                 free(cl->fileName);
                 free(cl);
-                
+
                 if (evpReturn < 0)
                 {
                     perror("execvp");
@@ -197,7 +190,7 @@ int main(void)
             }
             else if (pid > 0)
             {
-                printf("pid = %d\n", pid);
+                // printf("pid = %d\n", pid);
                 int status;
                 waitpid(pid, &status, 0);
                 fprintf(stderr, "+ completed '%s' [%d]\n", cmd, WEXITSTATUS(status));
