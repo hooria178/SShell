@@ -4,6 +4,9 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/wait.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 #define CMDLINE_MAX 512
 #define MAX_ARG 16
@@ -36,7 +39,31 @@ void parseCommandLine(struct CommandLine *cl, char *cmd)
         }
         else if (cmd[i] == '>')
         {
+            /*
+                take fileName from the argument list
+                then later assign NULL to any arguments after '>'
+            */
             lengthSoFar = i;
+            if (lengthSoFar != cmdLength && strstr(cmd, ">"))
+            {
+                int outputArg = argumentCount + 1;
+                currentLetter = 0;
+                // printf("cmdLine contains '>'\n");
+                // printf("%c\n", cmd[lengthSoFar]);
+                for (int j = lengthSoFar + 1; j < cmdLength; j++)
+                {
+                    while (cmd[j] == ' ') // if cmd[i] is a space
+                    {
+                        j++;
+                    }
+                    // printf("%c\n", cmd[i]);
+                    cl->arg[outputArg][currentLetter] = cmd[j];
+                    currentLetter++;
+                }
+                // printf("%s\n", cl->arg[outputArg]);
+                cl->fileName = cl->arg[outputArg];
+                // printf("%s\n", cl->fileName);
+            }
             break;
         }
         else
@@ -46,33 +73,16 @@ void parseCommandLine(struct CommandLine *cl, char *cmd)
         }
     }
     // printf("Argument Count: %d\n", argumentCount);
-    /*
-        take fileName from the argument list
-        then later assign NULL to any arguments after '>'
-    */
-    if (lengthSoFar != cmdLength && strstr(cmd, ">"))
-    {
-        int outputArg = argumentCount + 1;
-        currentLetter = 0;
-        // printf("cmdLine contains '>'\n");
-        // printf("%c\n", cmd[lengthSoFar]);
-        for (int i = lengthSoFar + 1; i < cmdLength; i++)
-        {
-            while (cmd[i] == ' ') // if cmd[i] is a space
-            {
-                i++;
-            }
-            // printf("%c\n", cmd[i]);
-            cl->arg[outputArg][currentLetter] = cmd[i];
-            currentLetter++;
-        }
-        // printf("%s\n", cl->arg[outputArg]);
-        cl->fileName = cl->arg[outputArg];
-        // printf("%s\n", cl->fileName);
-    }
 
     // Assigns "NULL" to remaining argument slots
     if (argumentCount < MAX_ARG)
+    {
+        for (int i = argumentCount + 1; i <= (MAX_ARG - argumentCount); i++)
+        {
+            cl->arg[i] = NULL;
+        }
+    }
+    if (argumentCount < MAX_ARG && strstr(cmd, ">"))
     {
         for (int i = argumentCount; i <= (MAX_ARG - argumentCount); i++)
         {
@@ -80,14 +90,6 @@ void parseCommandLine(struct CommandLine *cl, char *cmd)
         }
     }
 }
-
-/*
-    function for output redirection:
-    1. open file by the filename
-    2. take the output of the command before ">"
-    3. write the output to the file
-    4. close the file
-*/
 
 int main(void)
 {
@@ -117,14 +119,16 @@ int main(void)
             cl->arg[i] = malloc(MAX_LENGTH * sizeof(char));
         }
         cl->fileName = malloc(MAX_LENGTH * sizeof(char *));
-
+        cl->fileName = NULL;
         parseCommandLine(cl, cmd);
-        printf("File Name: %s\n", cl->fileName);
+        // printf("File Name: %s\n", cl->fileName);
+
         // // prints current word
         // for (int i = 0; i < MAX_ARG; i++)
         // {
         //     printf("Argument %d: %s\n", i, cl->arg[i]);
         // }
+
         /* Print command line if stdin is not provided by terminal */
         if (!isatty(STDIN_FILENO))
         {
@@ -135,25 +139,22 @@ int main(void)
         /* Builtin command */
         if (!strcmp(cmd, "exit"))
         {
-            // fprintf(stderr, "Bye...\n");
             fprintf(stderr, "Bye...\n+ completed '%s' [%d]\n", cmd, 0); // EXITSTATUS NEEDED
             break;
         }
         else if (!strcmp(cmd, "pwd"))
         {
-            printf("IN BUILTIN\n");
             char *current_directory = get_current_dir_name();
             printf("%s\n", current_directory);
-            fprintf(stderr, "Bye...\n+ completed '%s' [%d]\n", cmd, 0); // EXITSTATUS NEEDED
+            fprintf(stderr, "+ completed '%s' [%d]\n", cmd, 0); // EXITSTATUS NEEDED
             continue;
         }
         else if (strstr(cmd, "cd"))
         {
-            // int chdir(const char *filename)
             char *new_directory = cl->arg[1];
             chdir(new_directory);
             perror("cd");
-            fprintf(stderr, "Bye...\n+ completed '%s' [%d]\n", cmd, 0); // EXITSTATUS NEEDED
+            fprintf(stderr, "+ completed '%s' [%d]\n", cmd, 0); // EXITSTATUS NEEDED
 
             continue;
         }
@@ -165,7 +166,13 @@ int main(void)
             pid_t pid = fork(); // forking to run the command
             if (pid == 0)
             {
-                // printf("pid = %d\n", pid);
+                /* OUTPUT REDIRECTION */
+                if (cl->fileName != NULL)
+                {
+                    int fd = open(cl->fileName, O_WRONLY | O_CREAT, 0644);
+                    dup2(fd, STDOUT_FILENO);
+                    close(fd);
+                }
                 int evpReturn = execvp(cl->arg[0], cl->arg);
 
                 // free argument variable
