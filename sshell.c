@@ -37,34 +37,36 @@ void parseCommandLine(struct CommandLine *cl, char *cmd)
             currentLetter = 0; // resets back to 0 for next word's first character
             argumentCount++;   // move to the next argument
         }
-        else if (cmd[i] == '>')
+        else if (cmd[i] == '>' || cmd[i] == '<')
         {
+            if (cmd[i - 1] != ' ')
+            {
+                argumentCount++;
+            }
+            if (cmd[i + 1] != ' ')
+            {
+                argumentCount++;
+            }
             /*
                 take fileName from the argument list
                 then later assign NULL to any arguments after '>'
             */
             lengthSoFar = i;
-            if (lengthSoFar != cmdLength && strstr(cmd, ">"))
+            if (lengthSoFar != cmdLength && (strstr(cmd, ">") || strstr(cmd, "<")))
             {
                 int outputArg = argumentCount + 1;
                 currentLetter = 0;
-                // printf("cmdLine contains '>'\n");
-                // printf("%c\n", cmd[lengthSoFar]);
                 for (int j = lengthSoFar + 1; j < cmdLength; j++)
                 {
                     while (cmd[j] == ' ') // if cmd[i] is a space
                     {
                         j++;
                     }
-                    // printf("%c\n", cmd[i]);
                     cl->arg[outputArg][currentLetter] = cmd[j];
                     currentLetter++;
                 }
-                // printf("%s\n", cl->arg[outputArg]);
                 cl->fileName = cl->arg[outputArg];
-                // printf("%s\n", cl->fileName);
             }
-            break;
         }
         else
         {                                                   // if cmd[i] is NOT a space
@@ -72,19 +74,20 @@ void parseCommandLine(struct CommandLine *cl, char *cmd)
             currentLetter++;                                // move to the next letter
         }
     }
-    // printf("Argument Count: %d\n", argumentCount);
-
-    // Assigns "NULL" to remaining argument slots
-    if (argumentCount < MAX_ARG)
+    // printf("Argument Count is: %d\n", argumentCount);
+    //  Assigns "NULL" to remaining argument slots
+    /* THIS PART MAY BE A PROBLEM IF WE ARE DEALING WITH ARGUMENTS AFTER FILENAME*/
+    if (argumentCount < MAX_ARG && (strstr(cmd, ">") || strstr(cmd, "<")))
     {
-        for (int i = argumentCount + 1; i <= (MAX_ARG - argumentCount); i++)
+        for (int i = argumentCount - 1; i <= (MAX_ARG - argumentCount); i++) // FIX THE LAST NULL ARGUMENTS ASSIGNING
         {
             cl->arg[i] = NULL;
         }
     }
-    if (argumentCount < MAX_ARG && strstr(cmd, ">"))
+
+    if (argumentCount < MAX_ARG)
     {
-        for (int i = argumentCount; i <= (MAX_ARG - argumentCount); i++)
+        for (int i = argumentCount + 1; i <= (MAX_ARG - argumentCount); i++)
         {
             cl->arg[i] = NULL;
         }
@@ -167,10 +170,17 @@ int main(void)
             if (pid == 0)
             {
                 /* OUTPUT REDIRECTION */
-                if (cl->fileName != NULL)
+                if (cl->fileName != NULL && strstr(cmd, ">"))
                 {
-                    int fd = open(cl->fileName, O_WRONLY | O_CREAT, 0644);
+                    int fd = open(cl->fileName, O_WRONLY | O_CREAT | O_TRUNC, 0644);
                     dup2(fd, STDOUT_FILENO);
+                    close(fd);
+                }
+                /* INPUT REDIRECTION */
+                if (cl->fileName != NULL && strstr(cmd, "<"))
+                {
+                    int fd = open(cl->fileName, O_RDONLY, 0644);
+                    dup2(fd, STDIN_FILENO);
                     close(fd);
                 }
                 int evpReturn = execvp(cl->arg[0], cl->arg);
