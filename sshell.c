@@ -113,7 +113,7 @@ int main(void)
         fgets(cmdln, CMDLINE_MAX, stdin);
         
         /* Print command line if stdin is not provided by terminal */
-        if (!isatty(STDIN_FILENO)) 
+        if (!isatty(STDIN_FILENO))
         {
             printf("%s", cmdln);
             fflush(stdout);
@@ -161,13 +161,6 @@ int main(void)
         // {
         //     printf("Argument %d: %s\n", i, cl->arg[i]);
         // }
-
-        /* Print command line if stdin is not provided by terminal */
-        if (!isatty(STDIN_FILENO))
-        {
-            printf("%s", cmdln);
-            fflush(stdout);
-        }
 
         /* Builtin command */
         if (!strcmp(cmdln, "exit"))
