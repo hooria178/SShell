@@ -11,39 +11,41 @@
 #define CMDLINE_MAX 512
 #define MAX_ARG 16
 #define MAX_LENGTH 32
+#define NUM_PIPES 4
 
 struct CommandLine
 {
     char **arg;
+    char *cmd;
     char *fileName;
 };
 
-void parseCommandLine(struct CommandLine *cl, char *cmd)
+void parseCommandLine(struct CommandLine *cl)
 {
 
     int currentLetter = 0;
     int argumentCount = 0;
-    int cmdLength = strlen(cmd);
+    int cmdLength = strlen(cl->cmd);
     int lengthSoFar = 0;
 
     for (int i = 0; i < cmdLength; i++)
     {
-        if (cmd[i] == ' ' || NULL)
+        if (cl->cmd[i] == ' ' || NULL)
         { // if cmd[i] is a space
-            while (i < cmdLength - 1 && cmd[i + 1] == ' ')
+            while (i < cmdLength - 1 && cl->cmd[i + 1] == ' ')
             {
                 i++;
             }
             currentLetter = 0; // resets back to 0 for next word's first character
             argumentCount++;   // move to the next argument
         }
-        else if (cmd[i] == '>' || cmd[i] == '<')
+        else if (cl->cmd[i] == '>' || cl->cmd[i] == '<')
         {
-            if (cmd[i - 1] != ' ')
+            if (cl->cmd[i - 1] != ' ')
             {
                 argumentCount++;
             }
-            if (cmd[i + 1] != ' ')
+            if (cl->cmd[i + 1] != ' ')
             {
                 argumentCount++;
             }
@@ -52,17 +54,17 @@ void parseCommandLine(struct CommandLine *cl, char *cmd)
                 then later assign NULL to any arguments after '>'
             */
             lengthSoFar = i;
-            if (lengthSoFar != cmdLength && (strstr(cmd, ">") || strstr(cmd, "<")))
+            if (lengthSoFar != cmdLength && (strstr(cl->cmd, ">") || strstr(cl->cmd, "<")))
             {
                 int outputArg = argumentCount + 1;
                 currentLetter = 0;
                 for (int j = lengthSoFar + 1; j < cmdLength; j++)
                 {
-                    while (cmd[j] == ' ') // if cmd[i] is a space
+                    while (cl->cmd[j] == ' ') // if cmd[i] is a space
                     {
                         j++;
                     }
-                    cl->arg[outputArg][currentLetter] = cmd[j];
+                    cl->arg[outputArg][currentLetter] = cl->cmd[j];
                     currentLetter++;
                 }
                 cl->fileName = cl->arg[outputArg];
@@ -70,14 +72,14 @@ void parseCommandLine(struct CommandLine *cl, char *cmd)
         }
         else
         {                                                   // if cmd[i] is NOT a space
-            cl->arg[argumentCount][currentLetter] = cmd[i]; // add letter to the current argument
+            cl->arg[argumentCount][currentLetter] = cl->cmd[i]; // add letter to the current argument
             currentLetter++;                                // move to the next letter
         }
     }
     // printf("Argument Count is: %d\n", argumentCount);
     //  Assigns "NULL" to remaining argument slots
     /* THIS PART MAY BE A PROBLEM IF WE ARE DEALING WITH ARGUMENTS AFTER FILENAME*/
-    if (argumentCount < MAX_ARG && (strstr(cmd, ">") || strstr(cmd, "<")))
+    if (argumentCount < MAX_ARG && (strstr(cl->cmd, ">") || strstr(cl->cmd, "<")))
     {
         for (int i = argumentCount - 1; i <= (MAX_ARG - argumentCount); i++) // FIX THE LAST NULL ARGUMENTS ASSIGNING
         {
@@ -115,15 +117,30 @@ int main(void)
         if (nl)
             *nl = '\0';
 
-        struct CommandLine *cl = malloc(sizeof(struct CommandLine));
-        cl->arg = malloc(MAX_ARG * sizeof(char *));
-        for (int i = 0; i < MAX_ARG; ++i)
-        {
-            cl->arg[i] = malloc(MAX_LENGTH * sizeof(char));
+        struct CommandLine *cl[NUM_PIPES];
+        for(int i = 0; i < NUM_PIPES; i++){
+          cl[i] = malloc(sizeof(struct CommandLine));
+          cl[i]->arg = malloc(MAX_ARG * sizeof(char *));
+          for (int j = 0; j < MAX_ARG; ++j)
+          {
+              cl[i]->arg[j] = malloc(MAX_LENGTH * sizeof(char));
+          }
+          cl[i]->cmd = malloc(CMDLINE_MAX * sizeof(char));
+          cl[i]->fileName = malloc(MAX_LENGTH * sizeof(char));
+          cl[i]->fileName = NULL;
         }
-        cl->fileName = malloc(MAX_LENGTH * sizeof(char *));
-        cl->fileName = NULL;
-        parseCommandLine(cl, cmd);
+        char *token;
+        token = strtok(cmd, "|");
+        int numCommands = 0;
+        while(token){
+          cl[numCommands]->cmd = token;
+          numCommands++;
+          token = strtok(NULL, "|");
+        }
+        for(int i = 0; i < numCommands; i++){
+          parseCommandLine(cl[i]);
+          printf("cl[%d]->cmd: %s\n", i, cl[i]->cmd);
+        }
         // printf("File Name: %s\n", cl->fileName);
 
         // // prints current word
@@ -154,7 +171,7 @@ int main(void)
         }
         else if (strstr(cmd, "cd"))
         {
-            char *new_directory = cl->arg[1];
+            char *new_directory = cl[0]->arg[1];
             chdir(new_directory);
             perror("cd");
             fprintf(stderr, "+ completed '%s' [%d]\n", cmd, 0); // EXITSTATUS NEEDED
@@ -170,29 +187,38 @@ int main(void)
             if (pid == 0)
             {
                 /* OUTPUT REDIRECTION */
-                if (cl->fileName != NULL && strstr(cmd, ">"))
+                if (cl[numCommands-1]->fileName != NULL && strstr(cmd, ">"))
                 {
-                    int fd = open(cl->fileName, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+                    int fd = open(cl[numCommands-1]->fileName, O_WRONLY | O_CREAT | O_TRUNC, 0644);
                     dup2(fd, STDOUT_FILENO);
                     close(fd);
                 }
                 /* INPUT REDIRECTION */
-                if (cl->fileName != NULL && strstr(cmd, "<"))
+                if (cl[numCommands-1]->fileName != NULL && strstr(cmd, "<"))
                 {
-                    int fd = open(cl->fileName, O_RDONLY, 0644);
+                    int fd = open(cl[numCommands-1]->fileName, O_RDONLY, 0644);
                     dup2(fd, STDIN_FILENO);
                     close(fd);
                 }
-                int evpReturn = execvp(cl->arg[0], cl->arg);
+                int evpReturn = execvp(cl[numCommands-1]->arg[0], cl[numCommands-1]->arg);
 
                 // free argument variable
-                for (int i = 0; i < 16; ++i)
-                {
-                    free(cl->arg[i]);
+                for(int j = 0; j < NUM_PIPES; j++){
+                  printf("freeing cl[%d]\n", j);
+                  for (int i = 0; i < 16; ++i)
+                  {
+                      free(cl[j]->arg[i]);
+                  }
+                  free(cl[j]->arg);
+                  printf("\tfreed arg\n");
+                  free(cl[j]->cmd);
+                  printf("\tfreed cmd\n");
+                  free(cl[j]->fileName);
+                  printf("\tfreed fileName\n");
+                  free(cl[j]);
+                  printf("Completed\n");
                 }
-                free(cl->arg);
-                free(cl->fileName);
-                free(cl);
+
 
                 if (evpReturn < 0)
                 {
