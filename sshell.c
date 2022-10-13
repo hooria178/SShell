@@ -115,7 +115,7 @@ int main(void)
         /* Print command line if stdin is not provided by terminal */
         if (!isatty(STDIN_FILENO)) 
         {
-            printf("%s", cmd);
+            printf("%s", cmdln);
             fflush(stdout);
         }
 
