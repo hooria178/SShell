@@ -111,6 +111,13 @@ int main(void)
 
         /* Get command line */
         fgets(cmdln, CMDLINE_MAX, stdin);
+        
+        /* Print command line if stdin is not provided by terminal */
+        if (!isatty(STDIN_FILENO)) 
+        {
+            printf("%s", cmd);
+            fflush(stdout);
+        }
 
         /* Remove trailing newline from command line */
         nl = strchr(cmdln, '\n');
