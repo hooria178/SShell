@@ -30,7 +30,7 @@ void parseCommandLine(struct CommandLine *cl)
 
     for (int i = 0; i < cmdLength; i++)
     {
-        if (cl->cmd[i] == ' ' || NULL)
+        if (cl->cmd[i] == ' ')
         { // if cmd[i] is a space
             while (i < cmdLength - 1 && cl->cmd[i + 1] == ' ')
             {
@@ -71,9 +71,10 @@ void parseCommandLine(struct CommandLine *cl)
             }
         }
         else
-        {                                                   // if cmd[i] is NOT a space
+        {
+            // if cmd[i] is NOT a space
             cl->arg[argumentCount][currentLetter] = cl->cmd[i]; // add letter to the current argument
-            currentLetter++;                                // move to the next letter
+            currentLetter++; // move to the next letter
         }
     }
     // printf("Argument Count is: %d\n", argumentCount);
@@ -95,6 +96,110 @@ void parseCommandLine(struct CommandLine *cl)
         }
     }
 }
+/*
+
+void parse(struct CommandLine *cl){
+    int carrotindex = -1;
+    char *buf;
+    buf = malloc(CMDLINE_MAX * sizeof(char));
+    if(strstr(cl->cmd, ">")){
+        carrotindex = (int)(strchr(cl->cmd, '>')-cl->cmd);
+        printf("carrotindex = %d\n", carrotindex);
+        memcpy(buf, cl->cmd, carrotindex);
+    }
+    else{
+        memcpy(buf, cl->cmd, strlen(cl->cmd));
+    }
+    printf("finished memcpy\n");
+    printf("buf: %s\n", buf);
+    char *token;
+    token = strtok(buf, " ");
+    int argNum = 0;
+    while(token){
+        cl->arg[argNum] = token;
+        argNum++;
+        token = strtok(NULL, " ");
+    }
+    printf("finished strtok\n");
+    if(carrotindex != -1){
+        for(int i = carrotindex; i < (int)strlen(cl->cmd); i++){
+            if(cl->cmd[i] != ' ' && cl->cmd[i] != '>'){
+                cl->fileName[i - carrotindex] = cl->cmd[i];
+            }
+        }
+    }
+
+    for(int i = argNum; i < MAX_ARG; i++){
+        cl->arg[i] = NULL;
+    }
+    printf("fileName: %s\n", cl->fileName);
+    //free(buf);
+
+}
+*/
+void parse2(struct CommandLine *cl){
+
+  int currentLetter = 0;
+  int argumentCount = 0;
+
+  int cmdLength = strlen(cl->cmd);
+
+  int lengthSoFar = cmdLength;
+  /*
+  for(int i = 0; i < MAX_ARG; i++){
+    cl->arg[0] = NULL;
+  }
+  */
+
+  for (int i = 0; i < cmdLength; i++){
+    if(cl->cmd[i] == '>' || cl->cmd[i] == '<'){
+      lengthSoFar = i + 1;
+      break;
+    }
+    else if(cl->cmd[i] != ' '){
+      cl->arg[argumentCount][currentLetter] = cl->cmd[i];
+      currentLetter++;
+      if(i < cmdLength - 1 && (cl->cmd[i+1] == ' ') && (i+1 != cmdLength)){
+        //|| cl->cmd[i+1] == '>' || cl->cmd[i+1] == '<'
+        argumentCount++;
+        currentLetter = 0;
+      }
+    }
+  }
+
+  for(int i = lengthSoFar; i < cmdLength; i++){
+    if(cl->cmd[i] != ' '){
+      cl->fileName[i - lengthSoFar] = cl->cmd[i];
+    }
+  }
+
+  for(int i = argumentCount + 1; i < MAX_ARG; i++){
+    cl->arg[i] = NULL;
+  }
+
+}
+
+void parse3(struct CommandLine *cl){
+  char *token1;
+  token1 = strtok(cl->cmd, ">");
+  char *token2;
+  token2 = strtok(token1, " ");
+  int argNum = 0;
+  while(token2){
+      cl->arg[argNum] = token2;
+      argNum++;
+      token2 = strtok(NULL, " ");
+  }
+  token1 = strtok(NULL, ">");
+  while(token1){
+    cl->fileName = strtok(token1, " ");
+  }
+  printf("fileName: %s\n", cl->fileName);
+  for(int i = argNum; i < MAX_ARG; i++){
+    cl->arg[i] = NULL;
+  }
+
+}
 
 int main(void)
 {
@@ -111,13 +216,6 @@ int main(void)
 
         /* Get command line */
         fgets(cmdln, CMDLINE_MAX, stdin);
-        
-        /* Print command line if stdin is not provided by terminal */
-        if (!isatty(STDIN_FILENO))
-        {
-            printf("%s", cmdln);
-            fflush(stdout);
-        }
 
         /* Remove trailing newline from command line */
         nl = strchr(cmdln, '\n');
@@ -135,7 +233,7 @@ int main(void)
           }
           cl[i]->cmd = malloc(CMDLINE_MAX * sizeof(char));
           cl[i]->fileName = malloc(MAX_LENGTH * sizeof(char));
-          cl[i]->fileName = NULL;
+          //cl[i]->fileName = NULL;
         }
 
         // Separate the command line
@@ -147,9 +245,12 @@ int main(void)
           numCommands++;
           token = strtok(NULL, "|");
         }
+        for(int i = 0; i < 4; i++){printf("cl[%d]->cmd: %s\n", i, cl[i]->cmd);}
+
         for(int i = 0; i < numCommands; i++){
-          parseCommandLine(cl[i]);
+          parse3(cl[i]);
           printf("cl[%d]->cmd: %s\n", i, cl[i]->cmd);
+          printf("cl[%d]->fileName: %s\n", )
           for (int j = 0; j < MAX_ARG; j++){
             printf("\tArgument %d: %s\n", j, cl[i]->arg[j]);
           }
@@ -161,6 +262,13 @@ int main(void)
         // {
         //     printf("Argument %d: %s\n", i, cl->arg[i]);
         // }
+
+        /* Print command line if stdin is not provided by terminal */
+        if (!isatty(STDIN_FILENO))
+        {
+            printf("%s", cmdln);
+            fflush(stdout);
+        }
 
         /* Builtin command */
         if (!strcmp(cmdln, "exit"))
