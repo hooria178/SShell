@@ -13,6 +13,60 @@
 #define MAX_LENGTH 32
 #define NUM_PIPES 4
 
+/* ERROR MACROS */
+enum errornum
+{
+    TOO_MANY_ARGS,
+    MISSING_CMD,
+    NO_OUTPUT_FILE,
+    UNABLE_TO_OPEN_FILE,
+    MIS_OUT_REDIR,
+    DIR_NOT_EXIST,
+    CMD_NOT_FOUND,
+    NO_INPUT_FILE,
+    STDIN_FILE_NOT_EXIST,
+    MIS_IN_REDIR
+};
+
+/* FUNCTION TO CHECK ERROR STATUS */
+void error_checking(enum errornum error_number)
+{
+    switch (error_number)
+    {
+    case TOO_MANY_ARGS:
+        fprintf(stderr, "Error: too many process arguments\n");
+        break;
+    case MISSING_CMD:
+        fprintf(stderr, "Error: missing command\n");
+        break;
+    case NO_OUTPUT_FILE:
+        fprintf(stderr, "Error: no output file\n");
+        break;
+    case UNABLE_TO_OPEN_FILE:
+        fprintf(stderr, "Error: cannot open output file\n");
+        break;
+    case MIS_OUT_REDIR:
+        fprintf(stderr, "Error: mislocated output redirection\n");
+        break;
+    case DIR_NOT_EXIST:
+        fprintf(stderr, "Error: cannot cd into directory\n");
+        break;
+    case CMD_NOT_FOUND:
+        fprintf(stderr, "Error: command not found\n");
+        break;
+    case NO_INPUT_FILE:
+        fprintf(stderr, "Error: no input file\n");
+        break;
+    case STDIN_FILE_NOT_EXIST:
+        fprintf(stderr, "Error: cannot open input file\n");
+        break;
+    case MIS_IN_REDIR:
+        fprintf(stderr, "Error: mislocated input redirection\n");
+        break;
+    }
+}
+
+/* STRUCT TO CONTAIN COMMAND LINE VARIABLES */
 struct CommandLine
 {
     char **arg;
@@ -20,6 +74,7 @@ struct CommandLine
     char *fileName;
 };
 
+/* PARSING FUNCTION */
 void parseCommandLine(struct CommandLine *cl)
 {
 
@@ -28,10 +83,12 @@ void parseCommandLine(struct CommandLine *cl)
     int cmdLength = strlen(cl->cmd);
     int lengthSoFar = 0;
 
+    /* GOES THROUGH THE COMMAND LINE BY EACH CHARACTER TO EXTRACT ARGUMENTS AND IF APPLICABLE A FILENAME */
     for (int i = 0; i < cmdLength; i++)
     {
+
         if (cl->cmd[i] == ' ' || NULL)
-        { // if cmd[i] is a space
+        {
             while (i < cmdLength - 1 && cl->cmd[i + 1] == ' ')
             {
                 i++;
@@ -39,6 +96,7 @@ void parseCommandLine(struct CommandLine *cl)
             currentLetter = 0; // resets back to 0 for next word's first character
             argumentCount++;   // move to the next argument
         }
+        /* IF CMDLINE CONTAINS ">" OR "<", THEN GETS A FILENAME*/
         else if (cl->cmd[i] == '>' || cl->cmd[i] == '<')
         {
             if (cl->cmd[i - 1] != ' ')
@@ -67,7 +125,7 @@ void parseCommandLine(struct CommandLine *cl)
                     cl->arg[outputArg][currentLetter] = cl->cmd[j];
                     currentLetter++;
                 }
-                cl->fileName = cl->arg[outputArg];
+                cl->fileName = cl->arg[outputArg]; 
             }
         }
         else
@@ -93,6 +151,7 @@ void parseCommandLine(struct CommandLine *cl)
             cl->arg[i] = NULL;
         }
     }
+
 }
 
 int main(void)
@@ -102,7 +161,6 @@ int main(void)
     while (1)
     {
         char *nl;
-        // int retval;
 
         /* Print prompt */
         printf("sshell$ ");
@@ -123,7 +181,7 @@ int main(void)
         if (nl)
             *nl = '\0';
 
-        // Allocate space for the maximum number of pipes
+        /* Allocate space for the maximum number of pipes */
         struct CommandLine *cl[NUM_PIPES];
         for (int i = 0; i < NUM_PIPES; i++)
         {
@@ -149,30 +207,30 @@ int main(void)
             token = strtok(NULL, "|");
         }
 
+        /* CALLS FUNCTION TO PARSE THE COMMAND LINE */
         for (int i = 0; i < numCommands; i++)
         {
             parseCommandLine(cl[i]);
         }
 
         /* Builtin command */
-        if (!strcmp(cmdln, "exit"))
+        if (!strcmp(cmdln, "exit")) /* EXIT COMMAND */
         {
-            fprintf(stderr, "Bye...\n+ completed '%s' [%d]\n", cmdln, 0); // EXITSTATUS NEEDED
+            fprintf(stderr, "Bye...\n+ completed '%s' [%d]\n", cmdln, 0); 
             break;
         }
-        else if (!strcmp(cmdln, "pwd"))
+        else if (!strcmp(cmdln, "pwd")) /* PWD COMMAND */
         {
             char *current_directory = get_current_dir_name();
             printf("%s\n", current_directory);
-            fprintf(stderr, "+ completed '%s' [%d]\n", cmdln, 0); // EXITSTATUS NEEDED
+            fprintf(stderr, "+ completed '%s' [%d]\n", cmdln, 0);
             continue;
         }
-        else if (strstr(cmdln, "cd"))
+        else if (strstr(cmdln, "cd")) /* CD COMMAND */
         {
             char *new_directory = cl[0]->arg[1];
             chdir(new_directory);
-            // perror("cd");
-            fprintf(stderr, "+ completed '%s' [%d]\n", cmdln, 0); // EXITSTATUS NEEDED
+            fprintf(stderr, "+ completed '%s' [%d]\n", cmdln, 0); 
             continue;
         }
 
@@ -180,7 +238,6 @@ int main(void)
         pid_t sshellPid = fork(); // forking to keep the sshell running
         if (sshellPid == 0)       // child process to wait for its child to run command and return it back to display on terminal
         {
-            // printf("numCommands: %d\n", numCommands);
             if (numCommands == 2)
             {
                 int fd[2];
@@ -214,7 +271,6 @@ int main(void)
                     close(fd[1]);
                     dup2(fd[0], STDIN_FILENO);
                     close(fd[0]);
-                    // printf("cl[1]->arg[0] = %s\n", cl[1]->arg[0]);
                     int evpReturn = execvp(cl[1]->arg[0], cl[1]->arg);
                     if (evpReturn < 0)
                     {
@@ -251,12 +307,21 @@ int main(void)
                         dup2(fd, STDIN_FILENO);
                         close(fd);
                     }
+                    if (strstr(cmdln, ">") && cl[numCommands - 1]->fileName == NULL)
+                    {
+                        error_checking(NO_OUTPUT_FILE);
+                        break;
+                    }
+                    if (strstr(cmdln, "<") && cl[numCommands - 1]->fileName == NULL)
+                    {
+                        error_checking(NO_INPUT_FILE);
+                        break;
+                    }
                     int evpReturn = execvp(cl[0]->arg[0], cl[0]->arg);
 
-                    // free argument variable
+                    /* FREE ARGUMENT VARIABLES */
                     for (int j = 0; j < NUM_PIPES; j++)
                     {
-                        // fprintf(stdout, "freeing cl[%d]\n", j);
                         for (int i = 0; i < MAX_ARG; ++i)
                         {
                             free(cl[j]->arg[i]);
