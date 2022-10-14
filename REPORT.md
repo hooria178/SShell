@@ -64,3 +64,16 @@ lectures and lecture slides. We did, however, use internet sources to advise our
 code in different places. Most of the content we found to be useful came from
 Geeksforgeeks.org and tutorialspoint.com, both of which helped inform us on
 functions such as strtok and others.
+
+
+## Important Info About the Code
+ 
+This section describes the current functionality of our code, since we were not
+able to figure out a full implementation in time. Currently, our code is able to
+handle single commands effectively. Our input and output redirection are also
+working. However, our code does not handle piped commands, and will instead
+print out the output of the first command and freezes on the second. We
+implemented a set of error management macros but they conflicted with our code,
+and we wanted to give more time to the developement of the pipe function, which
+we know is also not working. 
+## 
