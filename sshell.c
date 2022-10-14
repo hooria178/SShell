@@ -30,7 +30,7 @@ void parseCommandLine(struct CommandLine *cl)
 
     for (int i = 0; i < cmdLength; i++)
     {
-        if (cl->cmd[i] == ' ')
+        if (cl->cmd[i] == ' ' || NULL)
         { // if cmd[i] is a space
             while (i < cmdLength - 1 && cl->cmd[i + 1] == ' ')
             {
@@ -71,18 +71,16 @@ void parseCommandLine(struct CommandLine *cl)
             }
         }
         else
-        {
-            // if cmd[i] is NOT a space
+        {                                                       // if cmd[i] is NOT a space
             cl->arg[argumentCount][currentLetter] = cl->cmd[i]; // add letter to the current argument
-            currentLetter++; // move to the next letter
+            currentLetter++;                                    // move to the next letter
         }
     }
-    // printf("Argument Count is: %d\n", argumentCount);
+
     //  Assigns "NULL" to remaining argument slots
-    /* THIS PART MAY BE A PROBLEM IF WE ARE DEALING WITH ARGUMENTS AFTER FILENAME*/
     if (argumentCount < MAX_ARG && (strstr(cl->cmd, ">") || strstr(cl->cmd, "<")))
     {
-        for (int i = argumentCount - 1; i <= (MAX_ARG - argumentCount); i++) // FIX THE LAST NULL ARGUMENTS ASSIGNING
+        for (int i = argumentCount - 1; i <= (MAX_ARG - argumentCount); i++)
         {
             cl->arg[i] = NULL;
         }
@@ -95,110 +93,6 @@ void parseCommandLine(struct CommandLine *cl)
             cl->arg[i] = NULL;
         }
     }
-}
-/*
-
-void parse(struct CommandLine *cl){
-    int carrotindex = -1;
-    char *buf;
-    buf = malloc(CMDLINE_MAX * sizeof(char));
-    if(strstr(cl->cmd, ">")){
-        carrotindex = (int)(strchr(cl->cmd, '>')-cl->cmd);
-        printf("carrotindex = %d\n", carrotindex);
-        memcpy(buf, cl->cmd, carrotindex);
-    }
-    else{
-        memcpy(buf, cl->cmd, strlen(cl->cmd));
-    }
-    printf("finished memcpy\n");
-    printf("buf: %s\n", buf);
-    char *token;
-    token = strtok(buf, " ");
-    int argNum = 0;
-    while(token){
-        cl->arg[argNum] = token;
-        argNum++;
-        token = strtok(NULL, " ");
-    }
-    printf("finished strtok\n");
-    if(carrotindex != -1){
-        for(int i = carrotindex; i < (int)strlen(cl->cmd); i++){
-            if(cl->cmd[i] != ' ' && cl->cmd[i] != '>'){
-                cl->fileName[i - carrotindex] = cl->cmd[i];
-            }
-        }
-    }
-
-    for(int i = argNum; i < MAX_ARG; i++){
-        cl->arg[i] = NULL;
-    }
-    printf("fileName: %s\n", cl->fileName);
-    //free(buf);
-
-}
-*/
-void parse2(struct CommandLine *cl){
-
-  int currentLetter = 0;
-  int argumentCount = 0;
-
-  int cmdLength = strlen(cl->cmd);
-
-  int lengthSoFar = cmdLength;
-  /*
-  for(int i = 0; i < MAX_ARG; i++){
-    cl->arg[0] = NULL;
-  }
-  */
-
-  for (int i = 0; i < cmdLength; i++){
-    if(cl->cmd[i] == '>' || cl->cmd[i] == '<'){
-      lengthSoFar = i + 1;
-      break;
-    }
-    else if(cl->cmd[i] != ' '){
-      cl->arg[argumentCount][currentLetter] = cl->cmd[i];
-      currentLetter++;
-      if(i < cmdLength - 1 && (cl->cmd[i+1] == ' ') && (i+1 != cmdLength)){
-        //|| cl->cmd[i+1] == '>' || cl->cmd[i+1] == '<'
-        argumentCount++;
-        currentLetter = 0;
-      }
-    }
-  }
-
-  for(int i = lengthSoFar; i < cmdLength; i++){
-    if(cl->cmd[i] != ' '){
-      cl->fileName[i - lengthSoFar] = cl->cmd[i];
-    }
-  }
-
-  for(int i = argumentCount + 1; i < MAX_ARG; i++){
-    cl->arg[i] = NULL;
-  }
-
-}
-
-void parse3(struct CommandLine *cl){
-  char *token1;
-  token1 = strtok(cl->cmd, ">");
-  char *token2;
-  token2 = strtok(token1, " ");
-  int argNum = 0;
-  while(token2){
-      cl->arg[argNum] = token2;
-      argNum++;
-      token2 = strtok(NULL, " ");
-  }
-  token1 = strtok(NULL, ">");
-  while(token1){
-    cl->fileName = strtok(token1, " ");
-  }
-  printf("fileName: %s\n", cl->fileName);
-  for(int i = argNum; i < MAX_ARG; i++){
-    cl->arg[i] = NULL;
-  }
-
 }
 
 int main(void)
@@ -217,6 +111,13 @@ int main(void)
         /* Get command line */
         fgets(cmdln, CMDLINE_MAX, stdin);
 
+        /* Print command line if stdin is not provided by terminal */
+        if (!isatty(STDIN_FILENO))
+        {
+            printf("%s", cmdln);
+            fflush(stdout);
+        }
+
         /* Remove trailing newline from command line */
         nl = strchr(cmdln, '\n');
         if (nl)
@@ -224,50 +125,33 @@ int main(void)
 
         // Allocate space for the maximum number of pipes
         struct CommandLine *cl[NUM_PIPES];
-        for(int i = 0; i < NUM_PIPES; i++){
-          cl[i] = malloc(sizeof(struct CommandLine));
-          cl[i]->arg = malloc(MAX_ARG * sizeof(char *));
-          for (int j = 0; j < MAX_ARG; ++j)
-          {
-              cl[i]->arg[j] = malloc(MAX_LENGTH * sizeof(char));
-          }
-          cl[i]->cmd = malloc(CMDLINE_MAX * sizeof(char));
-          cl[i]->fileName = malloc(MAX_LENGTH * sizeof(char));
-          //cl[i]->fileName = NULL;
+        for (int i = 0; i < NUM_PIPES; i++)
+        {
+            cl[i] = malloc(sizeof(struct CommandLine));
+            cl[i]->arg = malloc(MAX_ARG * sizeof(char *));
+            for (int j = 0; j < MAX_ARG; ++j)
+            {
+                cl[i]->arg[j] = malloc(MAX_LENGTH * sizeof(char));
+            }
+            cl[i]->cmd = malloc(CMDLINE_MAX * sizeof(char));
+            cl[i]->fileName = malloc(MAX_LENGTH * sizeof(char));
+            cl[i]->fileName = NULL;
         }
 
         // Separate the command line
         char *token;
         token = strtok(cmdln, "|");
         int numCommands = 0;
-        while(token){
-          cl[numCommands]->cmd = token;
-          numCommands++;
-          token = strtok(NULL, "|");
-        }
-        for(int i = 0; i < 4; i++){printf("cl[%d]->cmd: %s\n", i, cl[i]->cmd);}
-
-        for(int i = 0; i < numCommands; i++){
-          parse3(cl[i]);
-          printf("cl[%d]->cmd: %s\n", i, cl[i]->cmd);
-          printf("cl[%d]->fileName: %s\n", )
-          for (int j = 0; j < MAX_ARG; j++){
-            printf("\tArgument %d: %s\n", j, cl[i]->arg[j]);
-          }
-        }
-        // printf("File Name: %s\n", cl->fileName);
-
-        // // prints current word
-        // for (int i = 0; i < MAX_ARG; i++)
-        // {
-        //     printf("Argument %d: %s\n", i, cl->arg[i]);
-        // }
-
-        /* Print command line if stdin is not provided by terminal */
-        if (!isatty(STDIN_FILENO))
+        while (token)
         {
-            printf("%s", cmdln);
-            fflush(stdout);
+            cl[numCommands]->cmd = token;
+            numCommands++;
+            token = strtok(NULL, "|");
+        }
+
+        for (int i = 0; i < numCommands; i++)
+        {
+            parseCommandLine(cl[i]);
         }
 
         /* Builtin command */
@@ -287,9 +171,8 @@ int main(void)
         {
             char *new_directory = cl[0]->arg[1];
             chdir(new_directory);
-            perror("cd");
+            // perror("cd");
             fprintf(stderr, "+ completed '%s' [%d]\n", cmdln, 0); // EXITSTATUS NEEDED
-
             continue;
         }
 
@@ -297,12 +180,14 @@ int main(void)
         pid_t sshellPid = fork(); // forking to keep the sshell running
         if (sshellPid == 0)       // child process to wait for its child to run command and return it back to display on terminal
         {
-            printf("numCommands: %d\n", numCommands);
-            if(numCommands==2){
+            // printf("numCommands: %d\n", numCommands);
+            if (numCommands == 2)
+            {
                 int fd[2];
                 pipe(fd);
                 pid_t pid1 = fork();
-                if(pid1 == 0){
+                if (pid1 == 0)
+                {
                     close(fd[0]);
                     dup2(fd[1], STDOUT_FILENO);
                     close(fd[1]);
@@ -317,17 +202,19 @@ int main(void)
                         exit(0);
                     }
                 }
-                else{
-                  int status;
-                  waitpid(pid1, &status, 0);
-                  fprintf(stderr, "+ completed '%s' [%d]\n", cmdln, WEXITSTATUS(status));
+                else
+                {
+                    int status;
+                    waitpid(pid1, &status, 0);
+                    fprintf(stderr, "+ completed '%s' [%d]\n", cmdln, WEXITSTATUS(status));
                 }
                 pid_t pid2 = fork();
-                if(pid2 == 0){
+                if (pid2 == 0)
+                {
                     close(fd[1]);
                     dup2(fd[0], STDIN_FILENO);
                     close(fd[0]);
-                    printf("cl[1]->arg[0] = %s\n", cl[1]->arg[0]);
+                    // printf("cl[1]->arg[0] = %s\n", cl[1]->arg[0]);
                     int evpReturn = execvp(cl[1]->arg[0], cl[1]->arg);
                     if (evpReturn < 0)
                     {
@@ -339,46 +226,44 @@ int main(void)
                         exit(0);
                     }
                 }
-                else{
-                  int status;
-                  waitpid(pid2, &status, 0);
-                  fprintf(stderr, "+ completed '%s' [%d]\n", cmdln, WEXITSTATUS(status));
+                else
+                {
+                    int status;
+                    waitpid(pid2, &status, 0);
+                    fprintf(stderr, "+ completed '%s' [%d]\n", cmdln, WEXITSTATUS(status));
                 }
             }
-            else{
+            else
+            {
                 pid_t pid = fork();
                 if (pid == 0)
                 {
-                    if (cl[numCommands-1]->fileName != NULL && strstr(cmdln, ">"))
+                    if (cl[numCommands - 1]->fileName != NULL && strstr(cmdln, ">"))
                     {
-                        int fd = open(cl[numCommands-1]->fileName, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+                        int fd = open(cl[numCommands - 1]->fileName, O_WRONLY | O_CREAT | O_TRUNC, 0644);
                         dup2(fd, STDOUT_FILENO);
                         close(fd);
                     }
 
-                    if (cl[numCommands-1]->fileName != NULL && strstr(cmdln, "<"))
+                    if (cl[numCommands - 1]->fileName != NULL && strstr(cmdln, "<"))
                     {
-                        int fd = open(cl[numCommands-1]->fileName, O_RDONLY, 0644);
+                        int fd = open(cl[numCommands - 1]->fileName, O_RDONLY, 0644);
                         dup2(fd, STDIN_FILENO);
                         close(fd);
                     }
                     int evpReturn = execvp(cl[0]->arg[0], cl[0]->arg);
 
                     // free argument variable
-                    for(int j = 0; j < NUM_PIPES; j++){
-                    fprintf(stdout, "freeing cl[%d]\n", j);
-                    for (int i = 0; i < MAX_ARG; ++i)
+                    for (int j = 0; j < NUM_PIPES; j++)
                     {
-                        free(cl[j]->arg[i]);
-                    }
-                    free(cl[j]->arg);
-                    printf("\tfreed arg\n");
-                    free(cl[j]->fileName);
-                    printf("\tfreed fileName\n");
-                    //free(cl[j]->cmd);
-                    printf("\tfreed cmd\n");
-                    free(cl[j]);
-                    printf("Completed\n");
+                        // fprintf(stdout, "freeing cl[%d]\n", j);
+                        for (int i = 0; i < MAX_ARG; ++i)
+                        {
+                            free(cl[j]->arg[i]);
+                        }
+                        free(cl[j]->arg);
+                        free(cl[j]->fileName);
+                        free(cl[j]);
                     }
 
                     if (evpReturn < 0)
@@ -389,12 +274,10 @@ int main(void)
                     else
                     {
                         exit(0);
-                        // exit(EXIT_FAILURE);
                     }
                 }
                 else if (pid > 0)
                 {
-                    // printf("pid = %d\n", pid);
                     int status;
                     waitpid(pid, &status, 0);
                     fprintf(stderr, "+ completed '%s' [%d]\n", cmdln, WEXITSTATUS(status));
@@ -421,64 +304,3 @@ int main(void)
 
     return EXIT_SUCCESS;
 }
-
-/*
-pid_t pid = fork(); // forking to run the command
-            if (pid == 0)
-            {
-
-
-                if (cl[numCommands-1]->fileName != NULL && strstr(cmd, ">"))
-                {
-                    int fd = open(cl[numCommands-1]->fileName, O_WRONLY | O_CREAT | O_TRUNC, 0644);
-                    dup2(fd, STDOUT_FILENO);
-                    close(fd);
-                }
-
-                if (cl[numCommands-1]->fileName != NULL && strstr(cmd, "<"))
-                {
-                    int fd = open(cl[numCommands-1]->fileName, O_RDONLY, 0644);
-                    dup2(fd, STDIN_FILENO);
-                    close(fd);
-                }
-                int evpReturn = execvp(cl[0]->arg[0], cl[0]->arg);
-                // free argument variable
-                for(int j = 0; j < NUM_PIPES; j++){
-                  fprintf(stdout, "freeing cl[%d]\n", j);
-                  for (int i = 0; i < MAX_ARG; ++i)
-                  {
-                      free(cl[j]->arg[i]);
-                  }
-                  free(cl[j]->arg);
-                  printf("\tfreed arg\n");
-                  free(cl[j]->cmd);
-                  printf("\tfreed cmd\n");
-                  free(cl[j]->fileName);
-                  printf("\tfreed fileName\n");
-                  free(cl[j]);
-                  printf("Completed\n");
-                }
-                if (evpReturn < 0)
-                {
-                    perror("execvp");
-                    exit(1);
-                }
-                else
-                {
-                    exit(0);
-                    // exit(EXIT_FAILURE);
-                }
-            }
-            else if (pid > 0)
-            {
-                // printf("pid = %d\n", pid);
-                int status;
-                waitpid(pid, &status, 0);
-                fprintf(stderr, "+ completed '%s' [%d]\n", cmd, WEXITSTATUS(status));
-            }
-            else
-            {
-                perror("fork");
-                exit(0);
-            }
-*/
