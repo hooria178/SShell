@@ -236,9 +236,10 @@ int main(void)
         }
 
         /* Regular command */
-        pid_t sshellPid = fork(); // forking to keep the sshell running
-        if (sshellPid == 0)       // child process to wait for its child to run command and return it back to display on terminal
+        pid_t sshellPid = fork(); /* FORK TO KEEP THE SSHELL RUNNING */
+        if (sshellPid == 0)       /* CHILD PROCESS TO RUN COMMANDS */
         {
+            /* IF THERE IS PIPELINE REQUIRED */
             if (numCommands == 2)
             {
                 int fd[2];
@@ -290,10 +291,11 @@ int main(void)
                     fprintf(stderr, "+ completed '%s' [%d]\n", cmdln, WEXITSTATUS(status));
                 }
             }
+            /* IF THERE IS NO PIPELINE REQUIRED */
             else
             {
                 pid_t pid = fork();
-                if (pid == 0)
+                if (pid == 0) /* CHILD */
                 {
                     if (cl[numCommands - 1]->fileName != NULL && strstr(cmdln, ">"))
                     {
@@ -342,7 +344,7 @@ int main(void)
                         exit(0);
                     }
                 }
-                else if (pid > 0)
+                else if (pid > 0) /* PARENT */
                 {
                     int status;
                     waitpid(pid, &status, 0);
@@ -355,7 +357,7 @@ int main(void)
                 }
             }
         }
-        else if (sshellPid > 0)
+        else if (sshellPid > 0) /* PARENT (SSHELL) */
         {
             int status;
             waitpid(sshellPid, &status, 0); // wait for its child to return back with value to print on terminal
